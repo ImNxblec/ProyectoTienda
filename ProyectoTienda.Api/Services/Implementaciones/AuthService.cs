@@ -1,9 +1,8 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using ProyectoTienda.Api.Data;
 using ProyectoTienda.Api.DTOs;
 using ProyectoTienda.Api.Interfaces;
 using ProyectoTienda.Api.Models;
+using ProyectoTienda.Api.Repositories.Interfaces;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -12,18 +11,19 @@ namespace ProyectoTienda.Api.Services
 {
 	public class AuthService : IAuthService
 	{
-		private readonly AppDbContext _context;
+		private readonly IUsuarioRepository _usuarioRepository;
 		private readonly IConfiguration _config;
 
-		public AuthService(AppDbContext context, IConfiguration config)
+		public AuthService(IUsuarioRepository usuarioRepo, IConfiguration config)
 		{
-			_context = context;
+			_usuarioRepository = usuarioRepo;
 			_config = config;
 		}
 
 		public async Task<string> RegistrarAsync(RegisterDTO dto)
 		{
-			if (await _context.Usuarios.AnyAsync(u => u.Email == dto.Email))
+			var existente = await _usuarioRepository.GetByEmailAsync(dto.Email);
+			if (existente != null)
 				return "El correo ya está registrado.";
 
 			var user = new Usuario
@@ -33,15 +33,15 @@ namespace ProyectoTienda.Api.Services
 				PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password)
 			};
 
-			_context.Usuarios.Add(user);
-			await _context.SaveChangesAsync();
+			await _usuarioRepository.AddAsync(user);
+			await _usuarioRepository.SaveChangesAsync();
 
 			return GenerarToken(user);
 		}
 
 		public async Task<string> LoginAsync(LoginDTO dto)
 		{
-			var user = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email == dto.Email);
+			var user = await _usuarioRepository.GetByEmailAsync(dto.Email);
 			if (user == null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
 				return "Credenciales incorrectas.";
 
@@ -66,8 +66,6 @@ namespace ProyectoTienda.Api.Services
 				expires: DateTime.UtcNow.AddHours(2),
 				signingCredentials: creds
 			);
-
-
 
 			return new JwtSecurityTokenHandler().WriteToken(token);
 		}

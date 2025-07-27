@@ -5,6 +5,9 @@ using ProyectoTienda.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using ProyectoTienda.Api.Repositories.Interfaces;
+using ProyectoTienda.Api.Repositories.Implementaciones;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,7 +34,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddScoped<IAuthService, AuthService>();
-
+builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
